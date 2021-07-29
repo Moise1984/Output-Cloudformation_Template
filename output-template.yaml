@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  SubnetID:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet to deploy EC2 instance into
+  SecurityGroupIDs:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: List of Security Groups to add to EC2 instance
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: LatestAmiId
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      SecurityGroupIds:
+        Ref: SecurityGroupIDs
+      SubnetId:
+        Ref: SubnetID
+      UserData:
+        Fn::Base64:
+          Fn::Sub: "#!/bin/bash -ex\nyum install -y httpd;\necho \"<html>I love my\
+            \ maestro code pipeline!!</html>\" > /var/www/html/index.html;\ncd /var/www/html;\n\
+            chmod 755 index.html;\nservice httpd start;\nchkconfig httpd on;\n"
+  MyEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId:
+        Ref: EC2Instance
+      Tags:
+      - Key: Name
+        Value: CloudFormation Test - YAML
+      - Key: Environment
+        Value: Development
+Outputs:
+  MyEIP:
+    Description: MY EIP
+    Value:
+      Ref: MyEIP
